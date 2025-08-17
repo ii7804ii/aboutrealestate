@@ -16,58 +16,69 @@
     }
     .container {
       background: #fff;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      width: 90%;
-      max-width: 400px;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+      width: 95%;
+      max-width: 500px;
       text-align: center;
     }
     h2 {
-      margin-bottom: 20px;
+      margin-bottom: 25px;
+      font-size: 24px;
     }
-    /* 가로 정렬 */
+    /* 입력 라벨 */
+    label {
+      display: block;
+      text-align: left;
+      margin-bottom: 5px;
+      font-weight: bold;
+      font-size: 15px;
+      color: #333;
+    }
     .input-row {
       display: flex;
-      justify-content: space-between;
-      gap: 8px;
-      margin-bottom: 15px;
+      gap: 15px;
+      margin-bottom: 20px;
     }
     .input-group {
+      flex: 1;
+    }
+    .input-box {
       display: flex;
       align-items: center;
-      flex: 1;
       background: #fff;
       border: 1px solid #ccc;
-      border-radius: 8px;
-      padding: 5px 10px;
+      border-radius: 10px;
+      padding: 10px 12px;
     }
-    .input-group input {
+    .input-box input {
       border: none;
       outline: none;
       flex: 1;
-      font-size: 16px;
+      font-size: 18px;
       text-align: right;
     }
-    .input-group .unit {
-      margin-left: 5px;
-      font-size: 14px;
+    .unit {
+      margin-left: 6px;
+      font-size: 16px;
       color: #555;
     }
     .btn-group {
       display: flex;
       justify-content: space-around;
-      margin: 15px 0;
+      margin: 20px 0;
+      gap: 10px;
     }
     .btn-group button {
       flex: 1;
-      margin: 0 5px;
-      padding: 10px;
+      padding: 14px;
       border: none;
-      border-radius: 8px;
+      border-radius: 10px;
       background: #e0e0e0;
-      font-size: 16px;
+      font-size: 18px;
       cursor: pointer;
+      transition: 0.2s;
     }
     .btn-group button.active {
       background: #4caf50;
@@ -75,23 +86,35 @@
     }
     .btn {
       width: 100%;
-      padding: 12px;
-      font-size: 18px;
+      padding: 16px;
+      font-size: 20px;
       background: #4caf50;
       color: white;
       border: none;
-      border-radius: 8px;
+      border-radius: 10px;
       cursor: pointer;
+      transition: 0.2s;
+    }
+    .btn:hover {
+      background: #43a047;
     }
     .result {
-      margin-top: 20px;
-      font-size: 18px;
+      margin-top: 25px;
+      font-size: 20px;
       font-weight: bold;
     }
     .note {
-      margin-top: 5px;
-      font-size: 13px;
+      margin-top: 8px;
+      font-size: 14px;
       color: #666;
+    }
+
+    /* 📱 모바일 반응형: 화면이 600px 이하일 때 세로 정렬 */
+    @media (max-width: 600px) {
+      .input-row {
+        flex-direction: column;
+        gap: 10px;
+      }
     }
   </style>
 </head>
@@ -101,12 +124,18 @@
 
     <div class="input-row">
       <div class="input-group">
-        <input type="text" id="amount" placeholder="거래 금액">
-        <span class="unit">원</span>
+        <label for="amount">거래 금액</label>
+        <div class="input-box">
+          <input type="text" id="amount">
+          <span class="unit">원</span>
+        </div>
       </div>
       <div class="input-group">
-        <input type="number" id="customRate" placeholder="협의율" step="0.01">
-        <span class="unit">%</span>
+        <label for="customRate">협의 수수료율</label>
+        <div class="input-box">
+          <input type="number" id="customRate" step="0.01">
+          <span class="unit">%</span>
+        </div>
       </div>
     </div>
 
@@ -163,7 +192,7 @@
       if (!isNaN(customRate)) {
         feeRate = customRate / 100;
       } else {
-        // 기본 요율 (예시, 실제 정책 반영 필요)
+        // 기본 요율 (예시)
         if (selectedType === "매매") feeRate = 0.009;
         else if (selectedType === "전세") feeRate = 0.008;
         else if (selectedType === "월세") feeRate = 0.008;
