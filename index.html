@@ -8,12 +8,14 @@
     body { font-family: Arial, sans-serif; background:#f7f7f7; margin:0; padding:20px; }
     .container { max-width:500px; margin:0 auto; background:#fff; padding:20px; border-radius:14px; box-shadow:0 4px 8px rgba(0,0,0,0.1);}
     h2 { text-align:center; margin-bottom:20px; }
-    .input-group { margin-bottom:15px; }
-    label { font-weight:bold; }
-    input { width:100%; padding:10px; font-size:16px; margin-top:5px; border:1px solid #ddd; border-radius:8px;}
+    .input-group { margin-bottom:15px; display:flex; align-items:center; }
+    label { font-weight:bold; flex:1; }
+    input { flex:2; padding:10px; font-size:16px; margin-left:5px; border:1px solid #ddd; border-radius:8px; text-align:right; }
+    .suffix { margin-left:8px; font-weight:bold; }
     .btn-group { display:flex; justify-content:space-between; margin:20px 0; }
     .btn { flex:1; margin:0 5px; padding:12px; font-size:16px; font-weight:bold; border:none; border-radius:8px; cursor:pointer; background:#eee; }
     .btn.active { background:#007bff; color:white; }
+    #calcBtn { width:100%; padding:12px; font-size:18px; font-weight:bold; border:none; border-radius:8px; background:#28a745; color:white; cursor:pointer; }
     .result { font-size:20px; font-weight:bold; margin-top:20px; text-align:center; }
     .hint { font-size:13px; color:#777; margin-top:8px; text-align:center; }
   </style>
@@ -23,8 +25,15 @@
     <h2>부동산 중개수수료 계산기</h2>
 
     <div class="input-group">
-      <label>부동산 거래 금액 (VAT 제외)</label>
-      <input type="number" id="amount" placeholder="금액을 입력하세요">
+      <label>부동산 거래 금액</label>
+      <input type="text" id="amount" placeholder="금액 입력">
+      <span class="suffix">원</span>
+    </div>
+
+    <div class="input-group">
+      <label>협의 수수료율</label>
+      <input type="number" id="customRate" placeholder="예: 0.5"> 
+      <span class="suffix">%</span>
     </div>
 
     <div class="btn-group">
@@ -33,38 +42,52 @@
       <button class="btn" id="rentBtn">월세</button>
     </div>
 
+    <button id="calcBtn">계산하기</button>
+
     <div class="result" id="result">중개 수수료: -</div>
     <div class="hint">* VAT 별도</div>
   </div>
 
 <script>
   const amountInput = document.getElementById("amount");
+  const customRateInput = document.getElementById("customRate");
   const resultDiv = document.getElementById("result");
 
   let selectedType = null;
+
+  // 입력값 포맷 (3자리마다 콤마)
+  amountInput.addEventListener("input", (e) => {
+    let value = e.target.value.replace(/,/g, "").replace(/\D/g,"");
+    if(value) {
+      e.target.value = parseInt(value,10).toLocaleString();
+    } else {
+      e.target.value = "";
+    }
+  });
 
   function calcCommission(type, amount) {
     let rate = 0;
     let maxFee = null;
 
-    if(type === "sale"){ // 매매
-      if(amount <= 50000000){ rate = 0.006; maxFee = 250000; }
-      else if(amount <= 200000000){ rate = 0.005; }
-      else if(amount <= 600000000){ rate = 0.004; }
-      else if(amount <= 900000000){ rate = 0.005; } // 협의
-      else { rate = 0.009; } // 협의
-    }
-    else if(type === "lease"){ // 전세
-      if(amount <= 50000000){ rate = 0.005; maxFee = 200000; }
-      else if(amount <= 100000000){ rate = 0.004; }
-      else if(amount <= 300000000){ rate = 0.003; }
-      else { rate = 0.004; } // 협의
-    }
-    else if(type === "rent"){ // 월세 -> 환산보증금 입력받았다고 가정
-      if(amount <= 50000000){ rate = 0.005; maxFee = 200000; }
-      else if(amount <= 100000000){ rate = 0.004; }
-      else if(amount <= 300000000){ rate = 0.003; }
-      else { rate = 0.004; } // 협의
+    // 협의 수수료율 입력 시 우선 적용
+    const customRate = parseFloat(customRateInput.value);
+    if(!isNaN(customRate) && customRate > 0){
+      rate = customRate / 100; // % 입력 → 소수 변환
+    } else {
+      // 자동 요율 구간
+      if(type === "sale"){ // 매매
+        if(amount <= 50000000){ rate = 0.006; maxFee = 250000; }
+        else if(amount <= 200000000){ rate = 0.005; }
+        else if(amount <= 600000000){ rate = 0.004; }
+        else if(amount <= 900000000){ rate = 0.005; } // 협의
+        else { rate = 0.009; } // 협의
+      }
+      else if(type === "lease" || type === "rent"){ // 전세/월세 동일
+        if(amount <= 50000000){ rate = 0.005; maxFee = 200000; }
+        else if(amount <= 100000000){ rate = 0.004; }
+        else if(amount <= 300000000){ rate = 0.003; }
+        else { rate = 0.004; } // 협의
+      }
     }
 
     let fee = amount * rate;
@@ -74,11 +97,12 @@
   }
 
   function updateResult(){
-    if(!selectedType || !amountInput.value) {
+    const rawAmount = amountInput.value.replace(/,/g,"");
+    if(!selectedType || !rawAmount) {
       resultDiv.textContent = "중개 수수료: -";
       return;
     }
-    const amount = parseInt(amountInput.value, 10);
+    const amount = parseInt(rawAmount, 10);
     const fee = calcCommission(selectedType, amount);
     resultDiv.textContent = "중개 수수료: " + fee.toLocaleString() + " 원";
   }
@@ -87,13 +111,13 @@
     document.querySelectorAll(".btn").forEach(btn => btn.classList.remove("active"));
     document.getElementById(btnId).classList.add("active");
     selectedType = type;
-    updateResult();
   }
 
   document.getElementById("saleBtn").addEventListener("click", ()=> setActive("saleBtn","sale"));
   document.getElementById("leaseBtn").addEventListener("click", ()=> setActive("leaseBtn","lease"));
   document.getElementById("rentBtn").addEventListener("click", ()=> setActive("rentBtn","rent"));
-  amountInput.addEventListener("input", updateResult);
+
+  document.getElementById("calcBtn").addEventListener("click", updateResult);
 </script>
 </body>
 </html>
