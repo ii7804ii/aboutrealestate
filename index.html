@@ -7,12 +7,12 @@
   <style>
     body {
       font-family: Arial, sans-serif;
+      background-color: #f5f6f7;
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 100vh;
+      height: 100vh;
       margin: 0;
-      background: #f3f3f3;
     }
     .container {
       background: #fff;
@@ -20,21 +20,11 @@
       border-radius: 16px;
       box-shadow: 0 6px 16px rgba(0,0,0,0.15);
       width: 95%;
-      max-width: 500px;
+      max-width: 600px; /* 📌 박스 크기 확장 */
       text-align: center;
     }
     h2 {
       margin-bottom: 25px;
-      font-size: 24px;
-    }
-    /* 입력 라벨 */
-    label {
-      display: block;
-      text-align: left;
-      margin-bottom: 5px;
-      font-weight: bold;
-      font-size: 15px;
-      color: #333;
     }
     .input-row {
       display: flex;
@@ -43,6 +33,13 @@
     }
     .input-group {
       flex: 1;
+      text-align: left;
+    }
+    .input-label {
+      font-size: 14px;
+      margin-bottom: 6px;
+      display: block;
+      color: #333;
     }
     .input-box {
       display: flex;
@@ -64,56 +61,57 @@
       font-size: 16px;
       color: #555;
     }
-    .btn-group {
+    /* 📌 협의 수수료율 칸만 좁게 */
+    #customRate {
+      max-width: 100px;
+    }
+    .button-group {
       display: flex;
-      justify-content: space-around;
-      margin: 20px 0;
+      justify-content: center;
       gap: 10px;
-    }
-    .btn-group button {
-      flex: 1;
-      padding: 14px;
-      border: none;
-      border-radius: 10px;
-      background: #e0e0e0;
-      font-size: 18px;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-    .btn-group button.active {
-      background: #4caf50;
-      color: white;
+      margin-bottom: 20px;
     }
     .btn {
-      width: 100%;
-      padding: 16px;
-      font-size: 20px;
-      background: #4caf50;
-      color: white;
+      padding: 10px 20px;
       border: none;
-      border-radius: 10px;
+      border-radius: 8px;
+      background: #ddd;
       cursor: pointer;
-      transition: 0.2s;
+      font-size: 16px;
     }
-    .btn:hover {
-      background: #43a047;
+    .btn.active {
+      background: #4caf50;
+      color: #fff;
+    }
+    .calculate-btn {
+      width: 100%;
+      padding: 14px;
+      background: #4caf50;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 18px;
+      cursor: pointer;
+      margin-bottom: 20px;
     }
     .result {
-      margin-top: 25px;
-      font-size: 20px;
+      font-size: 18px;
       font-weight: bold;
+      margin-top: 10px;
     }
     .note {
-      margin-top: 8px;
-      font-size: 14px;
+      font-size: 12px;
       color: #666;
+      margin-top: 5px;
     }
-
-    /* 📱 모바일 반응형: 화면이 600px 이하일 때 세로 정렬 */
+    /* 📱 모바일 대응 */
     @media (max-width: 600px) {
       .input-row {
         flex-direction: column;
         gap: 10px;
+      }
+      #customRate {
+        max-width: 100%;
       }
     }
   </style>
@@ -124,82 +122,83 @@
 
     <div class="input-row">
       <div class="input-group">
-        <label for="amount">거래 금액</label>
+        <label class="input-label">거래 금액</label>
         <div class="input-box">
-          <input type="text" id="amount">
+          <input type="text" id="amount" placeholder="0" oninput="formatNumber(this)">
           <span class="unit">원</span>
         </div>
       </div>
+
       <div class="input-group">
-        <label for="customRate">협의 수수료율</label>
+        <label class="input-label">협의 수수료율</label>
         <div class="input-box">
-          <input type="number" id="customRate" step="0.01">
+          <input type="number" id="customRate" placeholder="">
           <span class="unit">%</span>
         </div>
       </div>
     </div>
 
-    <div class="btn-group">
-      <button onclick="selectType('매매')">매매</button>
-      <button onclick="selectType('전세')">전세</button>
-      <button onclick="selectType('월세')">월세</button>
+    <div class="button-group">
+      <button class="btn" onclick="selectType('매매')">매매</button>
+      <button class="btn" onclick="selectType('전세')">전세</button>
+      <button class="btn" onclick="selectType('월세')">월세</button>
     </div>
 
-    <button class="btn" onclick="calculate()">계산하기</button>
+    <button class="calculate-btn" onclick="calculate()">계산하기</button>
 
     <div class="result" id="result">중개 수수료: -</div>
     <div class="note">* VAT 별도</div>
   </div>
 
   <script>
-    let selectedType = null;
+    let selectedType = '';
 
     function selectType(type) {
       selectedType = type;
-      document.querySelectorAll('.btn-group button').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.textContent === type) {
-          btn.classList.add('active');
-        }
-      });
+      document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
     }
 
-    // 숫자 입력 시 자동 콤마 추가
-    document.getElementById("amount").addEventListener("input", function() {
-      let value = this.value.replace(/,/g, "");
-      if (!isNaN(value) && value !== "") {
-        this.value = Number(value).toLocaleString();
+    function formatNumber(input) {
+      let value = input.value.replace(/,/g, '');
+      if (!isNaN(value) && value !== '') {
+        input.value = Number(value).toLocaleString();
       }
-    });
+    }
 
     function calculate() {
-      let amountStr = document.getElementById("amount").value.replace(/,/g, "");
-      let customRate = parseFloat(document.getElementById("customRate").value);
-      let resultDiv = document.getElementById("result");
+      let amount = document.getElementById('amount').value.replace(/,/g, '');
+      let customRate = document.getElementById('customRate').value;
+      let resultDiv = document.getElementById('result');
 
-      if (!amountStr || isNaN(amountStr)) {
-        alert("거래 금액을 입력하세요.");
-        return;
-      }
-      if (!selectedType) {
-        alert("거래 유형을 선택하세요. (매매/전세/월세)");
+      if (!amount || !selectedType) {
+        alert("거래 금액과 거래 유형을 선택하세요.");
         return;
       }
 
-      let amount = parseFloat(amountStr);
-      let feeRate;
+      amount = Number(amount);
+      let feeRate = 0;
 
-      if (!isNaN(customRate)) {
-        feeRate = customRate / 100;
+      if (customRate) {
+        feeRate = Number(customRate) / 100;
       } else {
-        // 기본 요율 (예시)
-        if (selectedType === "매매") feeRate = 0.009;
-        else if (selectedType === "전세") feeRate = 0.008;
-        else if (selectedType === "월세") feeRate = 0.008;
+        if (selectedType === '매매') {
+          if (amount <= 60000000) feeRate = 0.006;
+          else if (amount <= 200000000) feeRate = 0.005;
+          else if (amount <= 900000000) feeRate = 0.004;
+          else feeRate = 0.009;
+        } else if (selectedType === '전세') {
+          if (amount <= 50000000) feeRate = 0.005;
+          else if (amount <= 100000000) feeRate = 0.004;
+          else if (amount <= 300000000) feeRate = 0.003;
+          else feeRate = 0.004;
+        } else if (selectedType === '월세') {
+          feeRate = 0.004;
+        }
       }
 
-      let fee = Math.floor(amount * feeRate);
-      resultDiv.textContent = "중개 수수료: " + fee.toLocaleString() + " 원";
+      let fee = amount * feeRate;
+      resultDiv.innerText = "중개 수수료: " + Math.round(fee).toLocaleString() + " 원";
     }
   </script>
 </body>
