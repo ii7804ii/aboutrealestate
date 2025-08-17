@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>부동산 복비·취득세 계산기</title>
+  <style>
+    :root { --gap: 14px; --radius: 14px; --shadow: 0 4px 16px rgba(0,0,0,.08); }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; background: #f7f7fb; color: #111; }
+    .wrap { max-width: 940px; margin: 28px auto; padding: 0 16px; }
+    .header { margin-bottom: 18px; }
+    .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .tab { background: #fff; border: 1px solid #e9e9ef; border-radius: var(--radius); padding: 12px; text-align: center; cursor: pointer; box-shadow: var(--shadow); }
+    .tab.active { border-color: #111; font-weight: 700; }
+    .card { background: #fff; border: 1px solid #e9e9ef; border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
+    .grid-1 { display: grid; grid-template-columns: 1fr; gap: var(--gap); }
+    @media (max-width: 720px){ .grid{ grid-template-columns: 1fr; } }
+    label { font-size: 14px; color: #444; }
+    input, select { width: 100%; box-sizing: border-box; border-radius: 12px; border: 1px solid #ddd; padding: 12px; font-size: 16px; }
+    .row { display: grid; gap: 6px; }
+    .hint { font-size: 12px; color: #777; }
+    .result { background: #0f172a; color: #fff; border-radius: var(--radius); padding: 16px; }
+    .result h3 { margin: 0 0 8px; font-size: 18px; }
+    .result .grid p { margin: 0; }
+    .muted { color: #94a3b8; font-size: 12px; }
+    .btn { border: 0; border-radius: 12px; padding: 12px 14px; font-size: 16px; cursor: pointer; box-shadow: var(--shadow); }
+    .btn.primary { background: #111; color: #fff; }
+    .row-inline { display: flex; align-items: center; gap: 8px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #eef2ff; color: #3730a3; font-size: 12px; margin-left: 6px; }
+    .footnote { margin-top: 14px; font-size: 12px; color: #666; line-height: 1.5; }
+    .hr { height: 1px; background: #eee; margin: 14px 0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <h1>부동산 복비·취득세 계산기</h1>
+      <div class="hint">참고용 계산기입니다. 실제 요율·과세는 법령/지자체/거래조건에 따라 달라질 수 있습니다.</div>
+    </div>
+
+    <div class="tabs">
+      <button id="tab-fee" class="tab active">중개보수(복비)</button>
+      <button id="tab-tax" class="tab">취득세</button>
+    </div>
+
+    <!-- 복비 계산기 -->
+    <section id="panel-fee" class="card">
+      <div class="grid">
+        <div class="row">
+          <label>거래 유형</label>
+          <select id="feeType">
+            <option value="매매" selected>매매</option>
+            <option value="전월세">전월세</option>
+            <option value="기타">기타</option>
+          </select>
+        </div>
+        <div class="row">
+          <label>거래 금액 (원)</label>
+          <input id="price" type="number" inputmode="numeric" placeholder="예: 350000000" />
+          <div class="hint">쉼표 없이 숫자만 입력</div>
+        </div>
+        <div class="row">
+          <label>수수료율 (%) <span class="badge">직접입력</span></label>
+          <input id="rate" type="number" step="0.001" placeholder="예: 0.5" />
+          <div class="hint">예: 0.5% → 0.5 로 입력 (법정 상한 내에서 입력하세요)</div>
+        </div>
+        <div class="row">
+          <label>부가세(VAT) 적용</label>
+          <select id="vat">
+            <option value="포함">부가세 포함(10%)</option>
+            <option value="미포함" selected>부가세 미포함</option>
+          </select>
+        </div>
+        <div class="row">
+          <label>분담 비율 (매수인:매도인)</label>
+          <div class="row-inline">
+            <input id="splitA" type="number" step="1" value="50" style="max-width:120px" /> :
+            <input id="splitB" type="number" step="1" value="50" style="max-width:120px" />
+          </div>
+          <div class="hint">합계 100 기준</div>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="grid">
+        <button class="btn primary" id="calcFee">복비 계산</button>
+        <button class="btn" id="resetFee">초기화</button>
+      </div>
+
+      <div class="result" id="feeResult" style="margin-top:14px; display:none;">
+        <h3>결과</h3>
+        <div class="grid">
+          <p>수수료(세전): <strong id="feeNet">-</strong></p>
+          <p>부가세: <strong id="feeVat">-</strong></p>
+          <p>총액(지급액): <strong id="feeTotal">-</strong></p>
+          <p>매수인 부담: <strong id="shareA">-</strong></p>
+          <p>매도인 부담: <strong id="shareB">-</strong></p>
+        </div>
+        <div class="muted">* 실제 상한/할증/할인은 해당 지역 규정과 중개사무소 정책을 확인하세요.</div>
+      </div>
+    </section>
+
+    <!-- 취득세 계산기 -->
+    <section id="panel-tax" class="card" style="display:none;">
+      <div class="grid">
+        <div class="row">
+          <label>과세표준 또는 취득가액 (원)</label>
+          <input id="taxBase" type="number" inputmode="numeric" placeholder="예: 350000000" />
+        </div>
+        <div class="row">
+          <label>계산 방식</label>
+          <select id="taxMode">
+            <option value="flat" selected>단일 세율</option>
+            <option value="bracket">누진 구간(커스텀)</option>
+          </select>
+        </div>
+        <div class="row" id="flatRow">
+          <label>세율 (%) <span class="badge">직접입력</span></label>
+          <input id="taxRate" type="number" step="0.001" placeholder="예: 1.1" />
+        </div>
+        <div class="row" id="bracketRow" style="display:none;">
+          <label>구간 설정(JSON)</label>
+          <textarea id="brackets" rows="6" style="width:100%;border-radius:12px;border:1px solid #ddd;padding:12px;font-family:ui-monospace,monospace;">
+[
+  {"upTo": 600000000, "rate": 1.0},
+  {"upTo": 900000000, "rate": 2.0},
+  {"upTo": null,       "rate": 3.0}
+]
+          </textarea>
+          <div class="hint">예시) 금액이 해당 구간 상한까지는 rate% 적용. 마지막 구간은 "upTo": null</div>
+        </div>
+        <div class="row">
+          <label>부가 세목(선택)</label>
+          <div class="grid-1">
+            <div class="row-inline">
+              <input id="eduSurtax" type="number" step="0.1" placeholder="지방교육세 % (취득세 대비)" style="max-width:240px" />
+              <span class="hint">예: 취득세의 10% → 10</span>
+            </div>
+            <div class="row-inline">
+              <input id="ruralSurtax" type="number" step="0.1" placeholder="농특세 % (해당 시)" style="max-width:240px" />
+              <span class="hint">예: 취득세의 10% → 10</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="grid">
+        <button class="btn primary" id="calcTax">취득세 계산</button>
+        <button class="btn" id="resetTax">초기화</button>
+      </div>
+
+      <div class="result" id="taxResult" style="margin-top:14px; display:none;">
+        <h3>결과</h3>
+        <div class="grid">
+          <p>취득세: <strong id="taxAmount">-</strong></p>
+          <p>지방교육세: <strong id="eduAmount">-</strong></p>
+          <p>농특세: <strong id="ruralAmount">-</strong></p>
+          <p>합계 납부세액: <strong id="taxTotal">-</strong></p>
+        </div>
+        <div class="muted">* 실제 세율은 주택 수, 취득 목적, 금액, 지역 규정 등에 따라 달라질 수 있습니다.</div>
+      </div>
+    </section>
+
+    <p class="footnote">
+      면책: 본 계산기는 참고용입니다. 실제 적용은 관련 법령·조례·고시 및 담당 기관 안내를 따르세요.
+    </p>
+  </div>
+
+  <script>
+    // 공통
+    const fmt = n => isFinite(n) ? n.toLocaleString('ko-KR') + '원' : '-';
+    const byId = id => document.getElementById(id);
+
+    // 탭 전환
+    const tabFee = byId('tab-fee'), tabTax = byId('tab-tax');
+    const panelFee = byId('panel-fee'), panelTax = byId('panel-tax');
+    tabFee.onclick = () => { tabFee.classList.add('active'); tabTax.classList.remove('active'); panelFee.style.display='block'; panelTax.style.display='none'; };
+    tabTax.onclick = () => { tabTax.classList.add('active'); tabFee.classList.remove('active'); panelTax.style.display='block'; panelFee.style.display='none'; };
+
+    // 복비 계산
+    byId('calcFee').onclick = () => {
+      const price = parseFloat(byId('price').value || '0');
+      const rate = parseFloat(byId('rate').value || '0') / 100;
+      const vatOn = byId('vat').value === '포함';
+      const a = parseFloat(byId('splitA').value || '0');
+      const b = parseFloat(byId('splitB').value || '0');
+      const sum = a + b || 100;
+      const feeNet = Math.max(0, price * rate);
+      const vat = vatOn ? feeNet * 0.10 : 0;
+      const total = feeNet + vat;
+      const shareA = total * (a / sum);
+      const shareB = total * (b / sum);
+      byId('feeNet').textContent = fmt(feeNet);
+      byId('feeVat').textContent = fmt(vat);
+      byId('feeTotal').textContent = fmt(total);
+      byId('shareA').textContent = fmt(shareA);
+      byId('shareB').textContent = fmt(shareB);
+      byId('feeResult').style.display = 'block';
+    };
+    byId('resetFee').onclick = () => {
+      ['price','rate','splitA','splitB'].forEach(id => byId(id).value = '');
+      byId('vat').value = '미포함';
+      byId('feeType').value = '매매';
+      byId('feeResult').style.display = 'none';
+    };
+
+    // 취득세 계산
+    const flatRow = byId('flatRow'), bracketRow = byId('bracketRow');
+    byId('taxMode').onchange = e => {
+      const m = e.target.value;
+      flatRow.style.display = (m === 'flat') ? 'block' : 'none';
+      bracketRow.style.display = (m === 'bracket') ? 'block' : 'none';
+    };
+
+    function calcBracket(base, brackets){
+      let remain = base, prevCap = 0, tax = 0;
+      for (const br of brackets){
+        const cap = (br.upTo === null || br.upTo === undefined) ? null : Number(br.upTo);
+        const rate = Number(br.rate) / 100;
+        if (cap === null){
+          tax += remain * rate;
+          break;
+        } else {
+          const slice = Math.max(0, Math.min(remain, cap - prevCap));
+          tax += slice * rate;
+          remain -= slice;
+          prevCap = cap;
+          if (remain <= 0) break;
+        }
+      }
+      return tax;
+    }
+
+    byId('calcTax').onclick = () => {
+      const base = parseFloat(byId('taxBase').value || '0');
+      const mode = byId('taxMode').value;
+      const eduPct = parseFloat(byId('eduSurtax').value || '0') / 100;
+      const ruralPct = parseFloat(byId('ruralSurtax').value || '0') / 100;
+
+      let tax = 0;
+      if (mode === 'flat'){
+        tax = base * (parseFloat(byId('taxRate').value || '0') / 100);
+      } else {
+        try {
+          const brackets = JSON.parse(byId('brackets').value);
+          tax = calcBracket(base, brackets);
+        } catch(e){
+          alert('구간 JSON 형식이 올바르지 않습니다.');
+          return;
+        }
+      }
+      const edu = tax * eduPct;
+      const rural = tax * ruralPct;
+      const total = tax + edu + rural;
+      byId('taxAmount').textContent = fmt(tax);
+      byId('eduAmount').textContent = fmt(edu);
+      byId('ruralAmount').textContent = fmt(rural);
+      byId('taxTotal').textContent = fmt(total);
+      byId('taxResult').style.display = 'block';
+    };
+    byId('resetTax').onclick = () => {
+      ['taxBase','taxRate','eduSurtax','ruralSurtax'].forEach(id => byId(id).value = '');
+      byId('taxMode').value = 'flat'; flatRow.style.display='block'; bracketRow.style.display='none';
+      byId('taxResult').style.display = 'none';
+    };
+  </script>
+</body>
+</html>
